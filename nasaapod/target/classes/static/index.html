@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NASA APOD Explorer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1220; --card:#0f1724; --accent:#3ab0ff; --muted:#98a0b3; --glass: rgba(255,255,255,0.03);
+      --maxw:1100px;
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;}
+    body{margin:0; background:linear-gradient(180deg,#08101a 0%, #071826 70%); color:#e6eef9; min-height:100vh; display:flex; justify-content:center;}
+    .wrap{width:100%; max-width:var(--maxw); padding:28px;}
+    header{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+    header h1{margin:0;font-size:20px;letter-spacing:0.4px}
+    .controls{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+    .card{background:linear-gradient(180deg,var(--card), #09111a); border-radius:12px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.03)}
+    .top{display:flex; gap:16px; align-items:center; justify-content:space-between}
+    .left {flex:1; display:flex; gap:12px; align-items:center}
+    input[type="date"], input[type="number"]{background:var(--glass); color:inherit; border:1px solid rgba(255,255,255,0.04); padding:8px 10px; border-radius:8px}
+    button{background:var(--accent); color:#061424; border:none; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:600}
+    .main-grid{display:grid;grid-template-columns: 1fr 380px; gap:18px;margin-top:18px}
+    .viewer{min-height:380px; border-radius:12px; overflow:hidden; display:flex; flex-direction:column}
+    .media{flex:1; display:flex; align-items:center; justify-content:center; background:black; min-height:300px}
+    .media img{max-width:100%; max-height:100%; display:block}
+    .meta{padding:12px; border-top:1px solid rgba(255,255,255,0.03); background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .title{font-weight:700;margin:0}
+    .explain{color:var(--muted); margin:8px 0 0 0; font-size:14px; max-height:140px; overflow:auto}
+    .gallery{display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-top:12px}
+    .thumb{background: #07111a; border-radius:8px; overflow:hidden; cursor:pointer; padding:6px; display:flex; flex-direction:column; gap:6px; align-items:center}
+    .thumb img{width:100%; height:100px; object-fit:cover; border-radius:6px}
+    .thumb .tdate{font-size:12px;color:var(--muted)}
+    .right .info{display:flex; gap:8px; flex-direction:column}
+    .k{font-size:12px;color:var(--muted)}
+    footer{margin-top:18px;color:var(--muted); font-size:13px}
+    .loader{display:inline-block;height:14px;width:14px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--accent);border-radius:50%; animation:spin 0.9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* responsive */
+    @media (max-width:900px){
+      .main-grid{grid-template-columns:1fr; }
+      .right{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="display:flex;flex-direction:column">
+        <h1>NASA APOD Explorer</h1>
+        <div class="controls">
+          <div class="card top" style="display:flex; align-items:center; gap:12px">
+            <div class="left">
+              <label style="font-size:13px; color:var(--muted)">Choose date</label>
+              <input id="dateInput" type="date" />
+              <button id="btnDate">Get</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label style="font-size:13px; color:var(--muted)">Recent</label>
+              <input id="daysInput" type="number" min="1" max="30" value="5" style="width:70px"/>
+              <button id="btnRecent">Load</button>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button id="btnToday">Today</button>
+              <div id="status" style="min-width:120px; color:var(--muted); font-size:13px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <div>
+        <div class="card viewer">
+          <div id="media" class="media">
+            <!-- image/video here -->
+            <div id="loadingMain" style="display:none"><span class="loader"></span></div>
+          </div>
+          <div class="meta">
+            <h2 id="title" class="title">Loading...</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div class="k" id="dateText"></div>
+              <div class="k" id="copyrightText"></div>
+            </div>
+            <p id="explanation" class="explain"></p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <strong>Gallery</strong>
+            <small class="k">Click thumbnail to view</small>
+          </div>
+          <div id="gallery" class="gallery" style="margin-top:10px">
+            <!-- thumbs -->
+          </div>
+        </div>
+      </div>
+
+      <aside class="right">
+        <div class="card" style="padding:14px">
+          <strong>Info</strong>
+          <div class="info" style="margin-top:8px">
+            <div><span class="k">API base</span><div id="apiBase" style="font-size:13px"></div></div>
+            <div><span class="k">Media type</span><div id="mediaType" style="font-size:13px"></div></div>
+            <div><span class="k">Service version</span><div id="svcVer" style="font-size:13px"></div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px; padding:12px">
+          <strong>Quick tips</strong>
+          <ul style="margin:8px 0 0 16px; color:var(--muted); font-size:13px">
+            <li>When served from Spring Boot put this file in <code>src/main/resources/static/index.html</code></li>
+            <li>Backend endpoints: <code>/api/apod/today</code>, <code>/api/apod/date?date=YYYY-MM-DD</code>, <code>/api/apod/recent?days=N</code></li>
+            <li>If backend is on a different origin, enable CORS in Spring Boot or run this page from same origin.</li>
+          </ul>
+        </div>
+        
+      </aside>
+    </div>
+
+    <footer class="card" style="margin-top:12px">
+      Built with ❤️ · Data from NASA APOD API
+    </footer>
+  </div>
+
+  <script>
+    // Use relative endpoints so this works when served from the same origin as the Spring Boot app.
+    const API_BASE = '/api/apod';
+    document.getElementById('apiBase').textContent = API_BASE;
+
+    const el = {
+      dateInput: document.getElementById('dateInput'),
+      btnDate: document.getElementById('btnDate'),
+      btnToday: document.getElementById('btnToday'),
+      btnRecent: document.getElementById('btnRecent'),
+      daysInput: document.getElementById('daysInput'),
+      media: document.getElementById('media'),
+      title: document.getElementById('title'),
+      dateText: document.getElementById('dateText'),
+      copyrightText: document.getElementById('copyrightText'),
+      explanation: document.getElementById('explanation'),
+      gallery: document.getElementById('gallery'),
+      status: document.getElementById('status'),
+      loadingMain: document.getElementById('loadingMain'),
+      mediaType: document.getElementById('mediaType'),
+      svcVer: document.getElementById('svcVer')
+    };
+
+    function setStatus(text, showLoader=false) {
+      el.status.innerHTML = showLoader ? text + ' <span class="loader"></span>' : text;
+    }
+
+    function showLoadingMain(show) {
+      el.loadingMain.style.display = show ? 'block' : 'none';
+    }
+
+    async function fetchJson(url) {
+      setStatus('Loading...', true);
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        setStatus('OK');
+        return json.data !== undefined ? json.data : json; // support wrapper and raw
+      } catch (err) {
+        setStatus('Error: ' + err.message);
+        console.error(err);
+        throw err;
+      }
+    }
+
+    function renderApod(apod) {
+      // clear media
+      el.media.innerHTML = '';
+      if (!apod) {
+        el.title.textContent = 'No data';
+        el.explanation.textContent = '';
+        return;
+      }
+      el.title.textContent = apod.title || 'Untitled';
+      el.dateText.textContent = apod.date || '';
+      el.copyrightText.textContent = apod.copyright ? '© ' + apod.copyright : '';
+      el.explanation.textContent = apod.explanation || '';
+      el.mediaType.textContent = apod.mediaType || apod.media_type || '';
+      el.svcVer.textContent = apod.serviceVersion || apod.service_version || '';
+
+      // media
+      if ((apod.mediaType || apod.media_type) === 'image' || apod.url && apod.url.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        const img = document.createElement('img');
+        img.src = apod.hdurl || apod.url;
+        img.alt = apod.title || 'APOD image';
+        el.media.appendChild(img);
+      } else {
+        // could be video
+        const iframe = document.createElement('iframe');
+        iframe.src = apod.url;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.frameBorder = '0';
+        el.media.appendChild(iframe);
+      }
+    }
+
+    async function loadToday() {
+      showLoadingMain(true);
+      try {
+        const data = await fetchJson(API_BASE + '/today');
+        renderApod(data);
+      } catch (e) {
+        // ignore
+      } finally {
+        showLoadingMain(false);
+      }
+    }
+
+    async function loadByDate(dateStr) {
+      if (!dateStr) return alert('Select a date first');
+      showLoadingMain(true);
+      try {
+        const data = await fetchJson(API_BASE + '/date?date=' + encodeURIComponent(dateStr));
+        renderApod(data);
+      } catch (e) {
+      } finally {
+        showLoadingMain(false);
+      }
+    }
+
+    async function loadRecent(days) {
+      showLoadingMain(true);
+      try {
+        const list = await fetchJson(API_BASE + '/recent?days=' + (days||5));
+        // list is array of apod objects
+        renderApod(list[0]); // show newest
+        // render gallery thumbnails
+        el.gallery.innerHTML = '';
+        for (const item of list) {
+          const div = document.createElement('div');
+          div.className = 'thumb';
+          const img = document.createElement('img');
+          img.src = item.url;
+          img.alt = item.title;
+          const d = document.createElement('div');
+          d.className = 'tdate';
+          d.textContent = item.date;
+          div.appendChild(img);
+          div.appendChild(d);
+          div.addEventListener('click', () => {
+            renderApod(item);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          el.gallery.appendChild(div);
+        }
+      } catch (e) {
+        el.gallery.innerHTML = '<div style="color:var(--muted)">Failed to load gallery</div>';
+      } finally {
+        showLoadingMain(false);
+      }
+    }
+
+    // bind events
+    el.btnToday.addEventListener('click', () => loadToday());
+    el.btnDate.addEventListener('click', () => loadByDate(el.dateInput.value));
+    el.btnRecent.addEventListener('click', () => loadRecent(Number(el.daysInput.value)));
+
+    // initialize: set date input default to today
+    (function init(){
+      const today = new Date();
+      const iso = today.toISOString().slice(0,10);
+      el.dateInput.value = iso;
+      loadToday();
+      loadRecent(Number(el.daysInput.value));
+    })();
+  </script>
+</body>
+</html>

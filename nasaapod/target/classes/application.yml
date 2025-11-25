@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: apod-explorer
+  cache:
+    caffeine:
+      spec: maximumSize=200,expireAfterWrite=1h
+
+apod:
+  base-url: https://api.nasa.gov/planetary/apod
+
+# You must set environment variable NASA_API_KEY or pass as JVM arg -DNASA_API_KEY=...
+
+server:
+  port: 8081
+
+NASA_API_KEY: OYD0N0vlixOzr7Y5t6l2IZceVAcT1PYN1j9xuRls
